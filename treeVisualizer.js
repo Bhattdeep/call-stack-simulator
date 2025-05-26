@@ -15,8 +15,8 @@ let canvasWidth = 800;
 let canvasHeight = 600;
 
 // Tree layout variables
-let levelHeight = 80;
-let horizontalSpacing = 20;
+let levelHeight = 100;
+let horizontalSpacing = 40;
 let nodePadding = 15;
 
 // Node appearance
@@ -56,29 +56,16 @@ function resizeTreeCanvas() {
 }
 
 function startTreeSimulation() {
-  const n = parseInt(inputValue.value);
+  const n = parseInt(document.getElementById("inputValue").value);
   if (isNaN(n) || n < 0) {
     showAlert("Please enter a valid non-negative number.");
     return;
   }
   
-  const metadata = functionMetadata[currentFunction];
-  let maxValue = metadata.maxValue;
-  
-  // Adjust warnings based on function
-  if (currentFunction === "fibonacci" && n > 8) {
-    showAlert(`Warning: Fibonacci with n > 8 creates a large tree visualization that might be difficult to display.`);
-  }
-  
-  if (n > maxValue) {
-    showAlert(`Warning: Values larger than ${maxValue} may cause performance issues. Using ${maxValue} instead.`);
-    inputValue.value = maxValue;
-  }
-
   if (!treeGenerator) {
     console.log("Creating new tree generator");
     resetTreeVisualization();
-    treeGenerator = createGenerator();
+    treeGenerator = createTreeGenerator();
     
     // Start performance tracking
     startTime = performance.now();
@@ -103,28 +90,15 @@ function pauseTreeSimulation() {
 
 function stepTreeSimulation() {
   if (!treeGenerator) {
-    const n = parseInt(inputValue.value);
+    const n = parseInt(document.getElementById("inputValue").value);
     if (isNaN(n) || n < 0) {
       showAlert("Please enter a valid non-negative number.");
       return;
     }
     
-    const metadata = functionMetadata[currentFunction];
-    let maxValue = metadata.maxValue;
-    
-    // Adjust warnings based on function
-    if (currentFunction === "fibonacci" && n > 8) {
-      showAlert(`Warning: Fibonacci with n > 8 creates a large tree visualization that might be difficult to display.`);
-    }
-    
-    if (n > maxValue) {
-      showAlert(`Warning: Values larger than ${maxValue} may cause performance issues. Using ${maxValue} instead.`);
-      inputValue.value = maxValue;
-    }
-    
     console.log("Creating new tree generator for step");
     resetTreeVisualization();
-    treeGenerator = createGenerator();
+    treeGenerator = createTreeGenerator();
     
     // Start performance tracking
     startTime = performance.now();
@@ -145,11 +119,6 @@ function resetTreeSimulation() {
   treeGenerator = null;
   resetTreeVisualization();
   toggleTreeButtons();
-  
-  // Reset performance tracking
-  callCount = 0;
-  callCountDisplay.textContent = "0";
-  document.getElementById("executionTime").textContent = "0.00 ms";
 }
 
 function resetTreeVisualization() {
@@ -157,7 +126,7 @@ function resetTreeVisualization() {
   treeNodes = {};
   rootNodeId = null;
   treeFinalResult = null;
-  finalResultDisplay.textContent = "-";
+  document.getElementById("finalResult").textContent = "-";
   
   // Clear tree canvas
   clearTreeCanvas();
@@ -173,26 +142,14 @@ function runTreeNext() {
     if (result.done) {
       console.log("Tree generator finished with result:", result.value);
       treeFinalResult = result.value;
-      finalResultDisplay.textContent = treeFinalResult;
+      document.getElementById("finalResult").textContent = treeFinalResult;
       treeRunning = false;
       toggleTreeButtons();
-      
-      // Record end time and display execution time
-      endTime = performance.now();
-      const executionTime = (endTime - startTime).toFixed(2);
-      document.getElementById("executionTime").textContent = `${executionTime} ms`;
-      
       return;
     }
     
     if (result.value) {
       updateTreeVisualization(result.value);
-      
-      // Track call count
-      if (result.value.type === "call") {
-        callCount++;
-        callCountDisplay.textContent = callCount;
-      }
     }
     
     treeAnimationFrame = requestAnimationFrame(() => {
@@ -214,26 +171,14 @@ function runTreeStep() {
     if (result.done) {
       console.log("Tree generator finished (step) with result:", result.value);
       treeFinalResult = result.value;
-      finalResultDisplay.textContent = treeFinalResult;
+      document.getElementById("finalResult").textContent = treeFinalResult;
       treeRunning = false;
       toggleTreeButtons();
-      
-      // Record end time and display execution time
-      endTime = performance.now();
-      const executionTime = (endTime - startTime).toFixed(2);
-      document.getElementById("executionTime").textContent = `${executionTime} ms`;
-      
       return;
     }
     
     if (result.value) {
       updateTreeVisualization(result.value);
-      
-      // Track call count
-      if (result.value.type === "call") {
-        callCount++;
-        callCountDisplay.textContent = callCount;
-      }
     }
   } catch (error) {
     console.error("Error in tree step:", error);
@@ -244,29 +189,53 @@ function runTreeStep() {
 }
 
 function toggleTreeButtons() {
+  const startBtn = document.getElementById("startBtn");
+  const pauseBtn = document.getElementById("pauseBtn");
+  const stepBtn = document.getElementById("stepBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  
   startBtn.disabled = treeRunning;
   pauseBtn.disabled = !treeRunning;
   stepBtn.disabled = treeRunning;
   resetBtn.disabled = false;
-  functionSelect.disabled = treeRunning || treeGenerator !== null;
-  inputValue.disabled = treeRunning || treeGenerator !== null;
+}
+
+function createTreeGenerator() {
+  const func = document.getElementById("functionSelect").value;
+  const inputValue = document.getElementById("inputValue").value;
   
-  if (inputGroup2.style.display !== "none") {
-    inputValue2.disabled = treeRunning || treeGenerator !== null;
-  }
-  
-  if (arrayInputGroup.style.display !== "none") {
-    inputArray.disabled = treeRunning || treeGenerator !== null;
+  try {
+    if (func === "factorial") {
+      const n = parseInt(inputValue);
+      return factorial(n);
+    } else if (func === "fibonacci") {
+      const n = parseInt(inputValue);
+      return fibonacci(n);
+    } else if (func === "gcd") {
+      const a = parseInt(inputValue);
+      const b = parseInt(document.getElementById("inputValue2").value);
+      return gcd(a, b);
+    } else if (func === "power") {
+      const base = parseInt(inputValue);
+      const exponent = parseInt(document.getElementById("inputValue2").value);
+      return power(base, exponent);
+    } else if (func === "sumArray") {
+      const arr = document.getElementById("inputArray").value.split(',').map(item => parseInt(item.trim()));
+      return sumArray(arr);
+    } else {
+      console.error("Unknown function selected");
+      return null;
+    }
+  } catch (error) {
+    showAlert("Error creating generator: " + error.message);
+    return null;
   }
 }
 
 function updateTreeVisualization(frame) {
   if (!frame) return;
   
-  console.log("Processing tree frame:", frame);
-  
   if (frame.type === "call") {
-    // Create or update node for this call
     const node = {
       id: frame.id,
       type: "call",
@@ -274,7 +243,7 @@ function updateTreeVisualization(frame) {
       arg: frame.arg,
       parent: frame.parent,
       children: [],
-      status: "executing", // active, executing, returned
+      status: "executing",
       local: frame.local,
       value: null,
       x: 0,
@@ -283,34 +252,24 @@ function updateTreeVisualization(frame) {
       height: nodeSize.height
     };
     
-    // Store the node
     treeNodes[frame.id] = node;
     
-    // If childId is specified, add to parent's children
-    if (frame.childId) {
-      if (treeNodes[frame.id]) {
-        treeNodes[frame.id].children.push(frame.childId);
-      }
+    if (frame.parent && treeNodes[frame.parent]) {
+      treeNodes[frame.parent].children.push(frame.id);
     }
     
-    // If this is first node, set as root
     if (!rootNodeId) {
       rootNodeId = frame.id;
     }
   } 
   else if (frame.type === "return") {
-    // Update the node with return value
     if (treeNodes[frame.id]) {
       treeNodes[frame.id].value = frame.value;
       treeNodes[frame.id].status = "returned";
-      treeNodes[frame.id].local = frame.local;
     }
   }
   
-  // Calculate layout after updating nodes
   calculateTreeLayout();
-  
-  // Draw the tree
   drawTree();
 }
 
@@ -321,15 +280,13 @@ function calculateTreeLayout() {
   Object.values(treeNodes).forEach(node => {
     node.x = 0;
     node.y = 0;
-    node.width = nodeSize.width;
-    node.height = nodeSize.height;
   });
   
-  // Calculate depth and assign y coordinates based on depth
+  // Calculate depth and assign y coordinates
   assignDepths(rootNodeId, 0);
   
-  // Calculate horizontal positions to avoid overlaps
-  calculateHorizontalPositions();
+  // Calculate horizontal positions
+  calculateHorizontalPositions(rootNodeId);
   
   // Center the tree
   centerTree();
@@ -339,82 +296,36 @@ function assignDepths(nodeId, depth) {
   if (!treeNodes[nodeId]) return;
   
   const node = treeNodes[nodeId];
-  
-  // Assign y coordinate based on depth
   node.y = depth * levelHeight + 50;
   
-  // Process children
   for (const childId of node.children) {
     assignDepths(childId, depth + 1);
   }
 }
 
-function calculateHorizontalPositions() {
-  // First pass: calculate subtree widths
-  calculateSubtreeWidths(rootNodeId);
-  
-  // Second pass: assign x coordinates
-  positionNodesHorizontally(rootNodeId, 50); // Start with some margin
-}
-
-function calculateSubtreeWidths(nodeId) {
-  if (!treeNodes[nodeId]) return 0;
+function calculateHorizontalPositions(nodeId, x = 0) {
+  if (!treeNodes[nodeId]) return x;
   
   const node = treeNodes[nodeId];
   
   if (node.children.length === 0) {
-    // Leaf node has fixed width
-    node.subtreeWidth = nodeSize.width + horizontalSpacing;
-    return node.subtreeWidth;
+    node.x = x + nodeSize.width / 2;
+    return x + nodeSize.width + horizontalSpacing;
   }
   
-  // Calculate total width of children
-  let totalChildrenWidth = 0;
+  let currentX = x;
   for (const childId of node.children) {
-    totalChildrenWidth += calculateSubtreeWidths(childId);
+    currentX = calculateHorizontalPositions(childId, currentX);
   }
   
-  // Store subtree width (max of own width or children's total)
-  node.subtreeWidth = Math.max(nodeSize.width + horizontalSpacing, totalChildrenWidth);
-  return node.subtreeWidth;
-}
-
-function positionNodesHorizontally(nodeId, xStart) {
-  if (!treeNodes[nodeId]) return xStart;
+  const firstChild = treeNodes[node.children[0]];
+  const lastChild = treeNodes[node.children[node.children.length - 1]];
+  node.x = (firstChild.x + lastChild.x) / 2;
   
-  const node = treeNodes[nodeId];
-  
-  if (node.children.length === 0) {
-    // Leaf node
-    node.x = xStart + (nodeSize.width / 2);
-    return xStart + node.subtreeWidth;
-  }
-  
-  // Position children first
-  let childXStart = xStart;
-  for (const childId of node.children) {
-    childXStart = positionNodesHorizontally(childId, childXStart);
-  }
-  
-  // Position this node centered over its children
-  if (node.children.length > 0) {
-    const firstChild = treeNodes[node.children[0]];
-    const lastChild = treeNodes[node.children[node.children.length - 1]];
-    
-    if (firstChild && lastChild) {
-      node.x = (firstChild.x + lastChild.x) / 2;
-    } else {
-      node.x = xStart + (nodeSize.width / 2);
-    }
-  } else {
-    node.x = xStart + (nodeSize.width / 2);
-  }
-  
-  return xStart + node.subtreeWidth;
+  return currentX;
 }
 
 function centerTree() {
-  // Find the bounds of the tree
   let minX = Infinity;
   let maxX = -Infinity;
   
@@ -423,11 +334,9 @@ function centerTree() {
     maxX = Math.max(maxX, node.x + node.width / 2);
   });
   
-  // Calculate the offset to center the tree
   const treeWidth = maxX - minX;
   const offset = (canvasWidth - treeWidth) / 2 - minX;
   
-  // Apply the offset to all nodes
   Object.values(treeNodes).forEach(node => {
     node.x += offset;
   });
@@ -447,7 +356,7 @@ function drawTree() {
   treeCtx.fillStyle = "#f9f9f9";
   treeCtx.fillRect(0, 0, canvasWidth, canvasHeight);
   
-  // Draw connections first (so they're behind nodes)
+  // Draw connections first
   drawConnections();
   
   // Draw all nodes
@@ -461,14 +370,14 @@ function drawConnections() {
   treeCtx.lineWidth = 2;
   
   for (const nodeId in treeNodes) {
-    const parent = treeNodes[nodeId];
+    const node = treeNodes[nodeId];
     
-    for (const childId of parent.children) {
+    for (const childId of node.children) {
       const child = treeNodes[childId];
       if (!child) continue;
       
       treeCtx.beginPath();
-      treeCtx.moveTo(parent.x, parent.y + parent.height / 2);
+      treeCtx.moveTo(node.x, node.y + node.height / 2);
       treeCtx.lineTo(child.x, child.y - child.height / 2);
       treeCtx.stroke();
     }
@@ -476,7 +385,6 @@ function drawConnections() {
 }
 
 function drawNode(node) {
-  // Set color based on node status
   let fillColor;
   switch (node.status) {
     case "executing":
@@ -489,7 +397,6 @@ function drawNode(node) {
       fillColor = colors.call;
   }
   
-  // Draw node shape
   const x = node.x - node.width / 2;
   const y = node.y - node.height / 2;
   const radius = 8;
@@ -533,110 +440,7 @@ function drawNode(node) {
   }
 }
 
-// Pan and zoom functionality
-let isPanning = false;
-let panStart = { x: 0, y: 0 };
-let viewOffset = { x: 0, y: 0 };
-let zoomLevel = 1;
-
-function setupTreeInteractions() {
-  if (!treeCanvas) return;
-  
-  // Mouse down for panning
-  treeCanvas.addEventListener('mousedown', (e) => {
-    isPanning = true;
-    panStart.x = e.clientX - viewOffset.x;
-    panStart.y = e.clientY - viewOffset.y;
-    treeCanvas.style.cursor = 'grabbing';
-  });
-  
-  // Mouse move for panning
-  treeCanvas.addEventListener('mousemove', (e) => {
-    if (!isPanning) return;
-    
-    viewOffset.x = e.clientX - panStart.x;
-    viewOffset.y = e.clientY - panStart.y;
-    
-    // Redraw with new offset
-    drawTreeWithTransform();
-  });
-  
-  // Mouse up to end panning
-  treeCanvas.addEventListener('mouseup', () => {
-    isPanning = false;
-    treeCanvas.style.cursor = 'grab';
-  });
-  
-  // Mouse leave to end panning
-  treeCanvas.addEventListener('mouseleave', () => {
-    isPanning = false;
-    treeCanvas.style.cursor = 'grab';
-  });
-  
-  // Wheel for zooming
-  treeCanvas.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    
-    const zoomDirection = e.deltaY > 0 ? -0.1 : 0.1;
-    const newZoom = Math.max(0.5, Math.min(3, zoomLevel + zoomDirection));
-    
-    // Calculate zoom around mouse position
-    const mouseX = e.clientX - treeCanvas.getBoundingClientRect().left;
-    const mouseY = e.clientY - treeCanvas.getBoundingClientRect().top;
-    
-    // Adjust viewOffset to zoom around mouse point
-    viewOffset.x = mouseX - ((mouseX - viewOffset.x) * (newZoom / zoomLevel));
-    viewOffset.y = mouseY - ((mouseY - viewOffset.y) * (newZoom / zoomLevel));
-    
-    zoomLevel = newZoom;
-    
-    // Redraw with new zoom
-    drawTreeWithTransform();
-  });
-  
-  // Double click to reset view
-  treeCanvas.addEventListener('dblclick', () => {
-    viewOffset = { x: 0, y: 0 };
-    zoomLevel = 1;
-    drawTreeWithTransform();
-  });
-  
-  // Set initial cursor
-  treeCanvas.style.cursor = 'grab';
-}
-
-function drawTreeWithTransform() {
-  if (!treeCtx) return;
-  
-  clearTreeCanvas();
-  
-  // Apply transformations
-  treeCtx.save();
-  treeCtx.translate(viewOffset.x, viewOffset.y);
-  treeCtx.scale(zoomLevel, zoomLevel);
-  
-  // Draw the tree with transformations
-  drawTree();
-  
-  // Restore context
-  treeCtx.restore();
-}
-
-// Add reset zoom button
-function addResetViewButton() {
-  const resetViewBtn = document.createElement('button');
-  resetViewBtn.id = 'resetViewBtn';
-  resetViewBtn.textContent = 'Reset View';
-  resetViewBtn.className = 'control-btn';
-  resetViewBtn.addEventListener('click', () => {
-    viewOffset = { x: 0, y: 0 };
-    zoomLevel = 1;
-    drawTreeWithTransform();
-  });
-  
-  // Add to visualization controls
-  const controlsContainer = document.querySelector('.visualization-controls');
-  if (controlsContainer) {
-    controlsContainer.appendChild(resetViewBtn);
-  }
-}
+// Initialize the tree visualizer when the DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+  initTreeVisualizer();
+});
