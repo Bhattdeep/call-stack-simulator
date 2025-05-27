@@ -1,446 +1,317 @@
-// Tree Visualization Core Variables
+
+let treeCanvas, treeCtx;
+let treeNodes = {};
+let rootNodeId = null;
+let nodeSize = { width: 100, height: 40, horizontalSpacing: 20, verticalSpacing: 80 };
+let canvasWidth, canvasHeight;
+
 let treeGenerator = null;
 let treeRunning = false;
-let treeSpeed = 1000;
-let treeNodes = {}; // Store all nodes by ID
-let rootNodeId = null;
-let treeAnimationFrame = null;
+let treeAnimationTimeout = null;
+let treeSpeed = 500; // milliseconds delay between steps
 let treeFinalResult = null;
-let nodeSize = { width: 120, height: 60 }; // Default node size
 
-// Canvas and dimensions
-let treeCanvas;
-let treeCtx;
-let canvasWidth = 800;
-let canvasHeight = 600;
+function showAlert(msg) {
+  alert(msg);
+}
 
-// Tree layout variables
-let levelHeight = 100;
-let horizontalSpacing = 40;
-let nodePadding = 15;
-
-// Node appearance
-const colors = {
-  call: "#3498db",
-  executing: "#f39c12",
-  return: "#2ecc71"
-};
-
-// Initialize the tree visualizer
 function initTreeVisualizer() {
   treeCanvas = document.getElementById("treeCanvas");
-  treeCtx = treeCanvas.getContext("2d");
-  
-  // Resize canvas to fit container
-  resizeTreeCanvas();
-  
-  // Add resize listener
-  window.addEventListener('resize', resizeTreeCanvas);
-}
-
-function resizeTreeCanvas() {
-  if (!treeCanvas) return;
-  
-  const container = treeCanvas.parentElement;
-  canvasWidth = container.clientWidth * 0.95;
-  canvasHeight = Math.max(500, window.innerHeight * 0.6);
-  
-  treeCanvas.width = canvasWidth;
-  treeCanvas.height = canvasHeight;
-  
-  // Redraw the tree with new dimensions if it exists
-  if (rootNodeId && Object.keys(treeNodes).length > 0) {
-    calculateTreeLayout();
-    drawTree();
-  }
-}
-
-function startTreeSimulation() {
-  const n = parseInt(document.getElementById("inputValue").value);
-  if (isNaN(n) || n < 0) {
-    showAlert("Please enter a valid non-negative number.");
+  if (!treeCanvas) {
+    showAlert("Canvas element with id 'treeCanvas' not found!");
     return;
   }
-  
-  if (!treeGenerator) {
-    console.log("Creating new tree generator");
-    resetTreeVisualization();
-    treeGenerator = createTreeGenerator();
-    
-    // Start performance tracking
-    startTime = performance.now();
-    callCount = 0;
+  treeCtx = treeCanvas.getContext("2d");
+  resizeCanvas();
+
+  window.addEventListener("resize", () => {
+    resizeCanvas();
+    drawTree();
+  });
+}
+
+function resizeCanvas() {
+  canvasWidth = window.innerWidth;
+  canvasHeight = window.innerHeight * 0.8; // leave space for buttons/input
+  treeCanvas.width = canvasWidth;
+  treeCanvas.height = canvasHeight;
+}
+
+function clearCanvas() {
+  treeCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+}
+
+function drawNode(node) {
+  const x = node.x;
+  const y = node.y;
+  const w = nodeSize.width;
+  const h = nodeSize.height;
+
+  // Node background
+  treeCtx.fillStyle = node.status === "executing" ? "#4a90e2" : "#cccccc";
+  treeCtx.strokeStyle = "#000000";
+  treeCtx.lineWidth = 2;
+  treeCtx.fillRect(x, y, w, h);
+  treeCtx.strokeRect(x, y, w, h);
+
+  // Text content inside the node
+  treeCtx.fillStyle = "#ffffff";
+  treeCtx.font = "bold 14px Arial";
+  treeCtx.textBaseline = "middle";
+  treeCtx.textAlign = "center";
+
+  const funcText = node.func + "(" + node.arg + ")";
+  treeCtx.fillText(funcText, x + w / 2, y + h / 3);
+
+  // Value or return value below function call
+  treeCtx.font = "italic 12px Arial";
+  const valText = node.value === null ? "" : "Return: " + node.value;
+  treeCtx.fillText(valText, x + w / 2, y + (2 * h) / 3);
+}
+
+function drawConnections() {
+  treeCtx.strokeStyle = "#888888";
+  treeCtx.lineWidth = 2;
+
+  Object.values(treeNodes).forEach((node) => {
+    if (node.children) {
+      node.children.forEach((childId) => {
+        const child = treeNodes[childId];
+        if (child) {
+          const startX = node.x + nodeSize.width / 2;
+          const startY = node.y + nodeSize.height;
+          const endX = child.x + nodeSize.width / 2;
+          const endY = child.y;
+          treeCtx.beginPath();
+          treeCtx.moveTo(startX, startY);
+          treeCtx.lineTo(endX, endY);
+          treeCtx.stroke();
+        }
+      });
+    }
+  });
+}
+
+function assignPositions() {
+  // Assign Y positions by depth (root = 0)
+  function setDepth(nodeId, depth) {
+    let node = treeNodes[nodeId];
+    if (!node) return;
+    node.depth = depth;
+    if (node.children) {
+      node.children.forEach((childId) => setDepth(childId, depth + 1));
+    }
   }
-  
+
+  if (!rootNodeId) return;
+  setDepth(rootNodeId, 0);
+
+  // Group nodes by depth
+  let levels = {};
+  Object.values(treeNodes).forEach((node) => {
+    if (!levels[node.depth]) levels[node.depth] = [];
+    levels[node.depth].push(node);
+  });
+
+  // Assign X positions in each level evenly spaced
+  Object.keys(levels).forEach((depth) => {
+    let nodesAtLevel = levels[depth];
+    let totalWidth = nodesAtLevel.length * nodeSize.width + (nodesAtLevel.length - 1) * nodeSize.horizontalSpacing;
+    let startX = (canvasWidth - totalWidth) / 2;
+
+    nodesAtLevel.forEach((node, idx) => {
+      node.x = startX + idx * (nodeSize.width + nodeSize.horizontalSpacing);
+      node.y = node.depth * (nodeSize.height + nodeSize.verticalSpacing) + 50;
+    });
+  });
+}
+
+function drawTree() {
+  clearCanvas();
+  assignPositions();
+  drawConnections();
+  Object.values(treeNodes).forEach(drawNode);
+}
+
+function resetTree() {
+  treeNodes = {};
+  rootNodeId = null;
+  treeFinalResult = null;
+  clearCanvas();
+  document.getElementById("finalResult").textContent = "";
+}
+
+function updateTreeVisualization(frame) {
+  if (!frame || !frame.id) {
+    return;
+  }
+
+  if (frame.type === "call") {
+    // Create node if not exists
+    if (!treeNodes[frame.id]) {
+      treeNodes[frame.id] = {
+        id: frame.id,
+        func: frame.func,
+        arg: frame.arg,
+        status: "executing",
+        value: null,
+        children: [],
+      };
+
+      if (frame.parent) {
+        // Add this node to parent's children
+        if (treeNodes[frame.parent]) {
+          treeNodes[frame.parent].children.push(frame.id);
+        }
+      } else {
+        rootNodeId = frame.id; // root call
+      }
+    } else {
+      // Node exists - mark executing
+      treeNodes[frame.id].status = "executing";
+    }
+  } else if (frame.type === "return") {
+    // Mark node return and update value
+    if (treeNodes[frame.id]) {
+      treeNodes[frame.id].status = "returned";
+      treeNodes[frame.id].value = frame.value;
+    }
+  }
+
+  drawTree();
+}
+
+function runTreeNext() {
+  if (!treeRunning) return;
+
+  try {
+    const result = treeGenerator.next();
+
+    if (result.done) {
+      treeFinalResult = result.value;
+      document.getElementById("finalResult").textContent = "Final Result: " + treeFinalResult;
+      treeRunning = false;
+      toggleTreeButtons();
+      return;
+    }
+
+    if (result.value) {
+      updateTreeVisualization(result.value);
+    }
+
+    treeAnimationTimeout = setTimeout(runTreeNext, treeSpeed);
+  } catch (error) {
+    treeRunning = false;
+    toggleTreeButtons();
+    showAlert("An error occurred: " + error.message);
+  }
+}
+
+function toggleTreeButtons() {
+  document.getElementById("startBtn").disabled = treeRunning;
+  document.getElementById("pauseBtn").disabled = !treeRunning;
+  document.getElementById("stepBtn").disabled = treeRunning;
+  document.getElementById("resetBtn").disabled = false;
+}
+
+function startTree() {
+  if (!treeGenerator) {
+    showAlert("Please select a function and input before starting.");
+    return;
+  }
+  if (treeRunning) return;
+
   treeRunning = true;
   toggleTreeButtons();
   runTreeNext();
 }
 
-function pauseTreeSimulation() {
-  console.log("Tree simulation paused");
+function pauseTree() {
   treeRunning = false;
+  clearTimeout(treeAnimationTimeout);
   toggleTreeButtons();
-  
-  if (treeAnimationFrame) {
-    cancelAnimationFrame(treeAnimationFrame);
-    treeAnimationFrame = null;
-  }
 }
 
-function stepTreeSimulation() {
+function stepTree() {
   if (!treeGenerator) {
-    const n = parseInt(document.getElementById("inputValue").value);
-    if (isNaN(n) || n < 0) {
-      showAlert("Please enter a valid non-negative number.");
+    showAlert("Please select a function and input before stepping.");
+    return;
+  }
+  if (treeRunning) return;
+
+  try {
+    const result = treeGenerator.next();
+    if (result.done) {
+      treeFinalResult = result.value;
+      document.getElementById("finalResult").textContent = "Final Result: " + treeFinalResult;
+      toggleTreeButtons();
       return;
     }
-    
-    console.log("Creating new tree generator for step");
-    resetTreeVisualization();
-    treeGenerator = createTreeGenerator();
-    
-    // Start performance tracking
-    startTime = performance.now();
-    callCount = 0;
+
+    if (result.value) {
+      updateTreeVisualization(result.value);
+    }
+  } catch (error) {
+    showAlert("An error occurred: " + error.message);
   }
-  runTreeStep();
 }
 
-function resetTreeSimulation() {
-  console.log("Tree simulation reset");
-  treeRunning = false;
-  
-  if (treeAnimationFrame) {
-    cancelAnimationFrame(treeAnimationFrame);
-    treeAnimationFrame = null;
-  }
-  
+function resetTreeRun() {
+  pauseTree();
+  resetTree();
   treeGenerator = null;
-  resetTreeVisualization();
   toggleTreeButtons();
 }
 
-function resetTreeVisualization() {
-  // Reset all visualization data
-  treeNodes = {};
-  rootNodeId = null;
-  treeFinalResult = null;
-  document.getElementById("finalResult").textContent = "-";
-  
-  // Clear tree canvas
-  clearTreeCanvas();
-}
+// =====================
+// Example generator for factorial
 
-function runTreeNext() {
-  if (!treeRunning) return;
-  
-  try {
-    const result = treeGenerator.next();
-    console.log("Tree generator result:", result);
-    
-    if (result.done) {
-      console.log("Tree generator finished with result:", result.value);
-      treeFinalResult = result.value;
-      document.getElementById("finalResult").textContent = treeFinalResult;
-      treeRunning = false;
-      toggleTreeButtons();
-      return;
-    }
-    
-    if (result.value) {
-      updateTreeVisualization(result.value);
-    }
-    
-    treeAnimationFrame = requestAnimationFrame(() => {
-      setTimeout(runTreeNext, treeSpeed);
-    });
-  } catch (error) {
-    console.error("Error in tree generator:", error);
-    treeRunning = false;
-    toggleTreeButtons();
-    showAlert("An error occurred during execution: " + error.message);
+function* factorial(n, parent = null) {
+  const id = `factorial_${n}_${Date.now()}`; // unique id with timestamp
+  yield { type: "call", id, func: "factorial", arg: n, parent };
+
+  if (n === 0 || n === 1) {
+    yield { type: "return", id, value: 1 };
+    return 1;
+  } else {
+    let subResult = yield* factorial(n - 1, id);
+    let result = n * subResult;
+    yield { type: "return", id, value: result };
+    return result;
   }
 }
 
-function runTreeStep() {
-  try {
-    const result = treeGenerator.next();
-    console.log("Tree step result:", result);
-    
-    if (result.done) {
-      console.log("Tree generator finished (step) with result:", result.value);
-      treeFinalResult = result.value;
-      document.getElementById("finalResult").textContent = treeFinalResult;
-      treeRunning = false;
-      toggleTreeButtons();
-      return;
-    }
-    
-    if (result.value) {
-      updateTreeVisualization(result.value);
-    }
-  } catch (error) {
-    console.error("Error in tree step:", error);
-    treeRunning = false;
-    toggleTreeButtons();
-    showAlert("An error occurred during execution: " + error.message);
+// Example generator for fibonacci
+
+function* fibonacci(n, parent = null) {
+  const id = `fibonacci_${n}_${Date.now()}`;
+  yield { type: "call", id, func: "fibonacci", arg: n, parent };
+
+  if (n === 0) {
+    yield { type: "return", id, value: 0 };
+    return 0;
   }
+  if (n === 1) {
+    yield { type: "return", id, value: 1 };
+    return 1;
+  }
+
+  let sub1 = yield* fibonacci(n - 1, id);
+  let sub2 = yield* fibonacci(n - 2, id);
+  let result = sub1 + sub2;
+
+  yield { type: "return", id, value: result };
+  return result;
 }
 
-function toggleTreeButtons() {
-  const startBtn = document.getElementById("startBtn");
-  const pauseBtn = document.getElementById("pauseBtn");
-  const stepBtn = document.getElementById("stepBtn");
-  const resetBtn = document.getElementById("resetBtn");
-  
-  startBtn.disabled = treeRunning;
-  pauseBtn.disabled = !treeRunning;
-  stepBtn.disabled = treeRunning;
-  resetBtn.disabled = false;
-}
-
-function createTreeGenerator() {
-  const func = document.getElementById("functionSelect").value;
-  const inputValue = document.getElementById("inputValue").value;
-  
-  try {
-    if (func === "factorial") {
-      const n = parseInt(inputValue);
-      return factorial(n);
-    } else if (func === "fibonacci") {
-      const n = parseInt(inputValue);
-      return fibonacci(n);
-    } else if (func === "gcd") {
-      const a = parseInt(inputValue);
-      const b = parseInt(document.getElementById("inputValue2").value);
-      return gcd(a, b);
-    } else if (func === "power") {
-      const base = parseInt(inputValue);
-      const exponent = parseInt(document.getElementById("inputValue2").value);
-      return power(base, exponent);
-    } else if (func === "sumArray") {
-      const arr = document.getElementById("inputArray").value.split(',').map(item => parseInt(item.trim()));
-      return sumArray(arr);
-    } else {
-      console.error("Unknown function selected");
-      return null;
-    }
-  } catch (error) {
-    showAlert("Error creating generator: " + error.message);
+// Call this function to set treeGenerator based on function name and input
+function prepareTreeGenerator(funcName, inputValue) {
+  if (funcName === "factorial") {
+    return factorial(Number(inputValue));
+  } else if (funcName === "fibonacci") {
+    return fibonacci(Number(inputValue));
+  } else {
+    showAlert("Function not implemented in visualizer yet.");
     return null;
   }
 }
-
-function updateTreeVisualization(frame) {
-  if (!frame) return;
-  
-  if (frame.type === "call") {
-    const node = {
-      id: frame.id,
-      type: "call",
-      func: frame.func,
-      arg: frame.arg,
-      parent: frame.parent,
-      children: [],
-      status: "executing",
-      local: frame.local,
-      value: null,
-      x: 0,
-      y: 0,
-      width: nodeSize.width,
-      height: nodeSize.height
-    };
-    
-    treeNodes[frame.id] = node;
-    
-    if (frame.parent && treeNodes[frame.parent]) {
-      treeNodes[frame.parent].children.push(frame.id);
-    }
-    
-    if (!rootNodeId) {
-      rootNodeId = frame.id;
-    }
-  } 
-  else if (frame.type === "return") {
-    if (treeNodes[frame.id]) {
-      treeNodes[frame.id].value = frame.value;
-      treeNodes[frame.id].status = "returned";
-    }
-  }
-  
-  calculateTreeLayout();
-  drawTree();
-}
-
-function calculateTreeLayout() {
-  if (!rootNodeId || Object.keys(treeNodes).length === 0) return;
-  
-  // Reset positions
-  Object.values(treeNodes).forEach(node => {
-    node.x = 0;
-    node.y = 0;
-  });
-  
-  // Calculate depth and assign y coordinates
-  assignDepths(rootNodeId, 0);
-  
-  // Calculate horizontal positions
-  calculateHorizontalPositions(rootNodeId);
-  
-  // Center the tree
-  centerTree();
-}
-
-function assignDepths(nodeId, depth) {
-  if (!treeNodes[nodeId]) return;
-  
-  const node = treeNodes[nodeId];
-  node.y = depth * levelHeight + 50;
-  
-  for (const childId of node.children) {
-    assignDepths(childId, depth + 1);
-  }
-}
-
-function calculateHorizontalPositions(nodeId, x = 0) {
-  if (!treeNodes[nodeId]) return x;
-  
-  const node = treeNodes[nodeId];
-  
-  if (node.children.length === 0) {
-    node.x = x + nodeSize.width / 2;
-    return x + nodeSize.width + horizontalSpacing;
-  }
-  
-  let currentX = x;
-  for (const childId of node.children) {
-    currentX = calculateHorizontalPositions(childId, currentX);
-  }
-  
-  const firstChild = treeNodes[node.children[0]];
-  const lastChild = treeNodes[node.children[node.children.length - 1]];
-  node.x = (firstChild.x + lastChild.x) / 2;
-  
-  return currentX;
-}
-
-function centerTree() {
-  let minX = Infinity;
-  let maxX = -Infinity;
-  
-  Object.values(treeNodes).forEach(node => {
-    minX = Math.min(minX, node.x - node.width / 2);
-    maxX = Math.max(maxX, node.x + node.width / 2);
-  });
-  
-  const treeWidth = maxX - minX;
-  const offset = (canvasWidth - treeWidth) / 2 - minX;
-  
-  Object.values(treeNodes).forEach(node => {
-    node.x += offset;
-  });
-}
-
-function clearTreeCanvas() {
-  if (!treeCtx) return;
-  treeCtx.clearRect(0, 0, canvasWidth, canvasHeight);
-}
-
-function drawTree() {
-  if (!treeCtx || !rootNodeId) return;
-  
-  clearTreeCanvas();
-  
-  // Draw canvas background
-  treeCtx.fillStyle = "#f9f9f9";
-  treeCtx.fillRect(0, 0, canvasWidth, canvasHeight);
-  
-  // Draw connections first
-  drawConnections();
-  
-  // Draw all nodes
-  for (const nodeId in treeNodes) {
-    drawNode(treeNodes[nodeId]);
-  }
-}
-
-function drawConnections() {
-  treeCtx.strokeStyle = "#aaa";
-  treeCtx.lineWidth = 2;
-  
-  for (const nodeId in treeNodes) {
-    const node = treeNodes[nodeId];
-    
-    for (const childId of node.children) {
-      const child = treeNodes[childId];
-      if (!child) continue;
-      
-      treeCtx.beginPath();
-      treeCtx.moveTo(node.x, node.y + node.height / 2);
-      treeCtx.lineTo(child.x, child.y - child.height / 2);
-      treeCtx.stroke();
-    }
-  }
-}
-
-function drawNode(node) {
-  let fillColor;
-  switch (node.status) {
-    case "executing":
-      fillColor = colors.executing;
-      break;
-    case "returned":
-      fillColor = colors.return;
-      break;
-    default:
-      fillColor = colors.call;
-  }
-  
-  const x = node.x - node.width / 2;
-  const y = node.y - node.height / 2;
-  const radius = 8;
-  
-  // Draw shadow
-  treeCtx.fillStyle = "rgba(0, 0, 0, 0.1)";
-  treeCtx.fillRect(x + 3, y + 3, node.width, node.height);
-  
-  // Draw rounded rectangle
-  treeCtx.fillStyle = fillColor;
-  treeCtx.beginPath();
-  treeCtx.moveTo(x + radius, y);
-  treeCtx.lineTo(x + node.width - radius, y);
-  treeCtx.quadraticCurveTo(x + node.width, y, x + node.width, y + radius);
-  treeCtx.lineTo(x + node.width, y + node.height - radius);
-  treeCtx.quadraticCurveTo(x + node.width, y + node.height, x + node.width - radius, y + node.height);
-  treeCtx.lineTo(x + radius, y + node.height);
-  treeCtx.quadraticCurveTo(x, y + node.height, x, y + node.height - radius);
-  treeCtx.lineTo(x, y + radius);
-  treeCtx.quadraticCurveTo(x, y, x + radius, y);
-  treeCtx.closePath();
-  treeCtx.fill();
-  
-  // Node border
-  treeCtx.strokeStyle = "rgba(0, 0, 0, 0.3)";
-  treeCtx.lineWidth = 1;
-  treeCtx.stroke();
-  
-  // Draw text
-  treeCtx.fillStyle = "white";
-  treeCtx.font = "12px Arial";
-  treeCtx.textAlign = "center";
-  treeCtx.textBaseline = "middle";
-  
-  // Function name and arguments
-  treeCtx.fillText(`${node.func}(${node.arg})`, node.x, node.y - 10);
-  
-  // Return value if available
-  if (node.value !== null) {
-    treeCtx.fillText(`Return: ${node.value}`, node.x, node.y + 10);
-  }
-}
-
-// Initialize the tree visualizer when the DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-  initTreeVisualizer();
-});
