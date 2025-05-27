@@ -2,11 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Recursive Function Visualizer</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -16,22 +19,22 @@
       <p>Watch recursion in action as functions execute step by step.</p>
     </header>
 
-    <div class="info-panel">
+    <section class="info-panel">
       <h3>Function Information</h3>
       <div id="functionInfo" class="info-section">
-        <div class="info-card function-description">
+        <article class="info-card function-description">
           <h4>Description</h4>
           <p id="functionDescription">Loading function description...</p>
-        </div>
-        <div class="info-card time-complexity">
+        </article>
+        <article class="info-card time-complexity">
           <h4>Time Complexity</h4>
           <p id="timeComplexity">-</p>
-        </div>
-        <div class="info-card space-complexity">
+        </article>
+        <article class="info-card space-complexity">
           <h4>Space Complexity</h4>
           <p id="spaceComplexity">-</p>
-        </div>
-        <div class="info-card performance-metrics">
+        </article>
+        <article class="info-card performance-metrics">
           <h4>Performance Metrics</h4>
           <div class="metrics-container">
             <div class="metric">
@@ -43,14 +46,14 @@
               <span id="executionTime" class="metric-value">0.00 ms</span>
             </div>
           </div>
-        </div>
+        </article>
       </div>
-    </div>
+    </section>
 
-    <div class="controls">
+    <section class="controls">
       <div class="input-group">
-        <label for="functionSelect">Function:</label>
-        <select id="functionSelect">
+        <label for="functionSelect">Select Function:</label>
+        <select id="functionSelect" aria-label="Select recursive function">
           <option value="factorial">Factorial</option>
           <option value="fibonacci">Fibonacci</option>
           <option value="gcd">Greatest Common Divisor (GCD)</option>
@@ -61,70 +64,71 @@
 
       <div class="input-group">
         <label id="inputLabel" for="inputValue">n:</label>
-        <input type="number" id="inputValue" value="5" min="0" max="10" />
+        <input type="number" id="inputValue" min="0" max="10" value="5" />
       </div>
 
-      <div id="inputGroup2" class="input-group" style="display: none;">
+      <div class="input-group" id="inputGroup2" style="display:none;">
         <label id="input2Label" for="inputValue2">b:</label>
-        <input type="number" id="inputValue2" value="3" min="0" max="10" />
+        <input type="number" id="inputValue2" min="0" max="10" value="3" />
       </div>
 
-      <div id="arrayInputGroup" class="input-group" style="display: none;">
+      <div class="input-group" id="arrayInputGroup" style="display:none;">
         <label for="inputArray">Array elements:</label>
-        <input type="text" id="inputArray" value="1, 2, 3, 4, 5" placeholder="Enter comma-separated values" />
+        <input type="text" id="inputArray" placeholder="Enter comma-separated values" value="1, 2, 3, 4, 5" />
       </div>
 
-      <div class="visualization-type">
-        <label>Visualization Type:</label>
-        <div class="toggle-container">
-          <input type="radio" id="stackVisual" name="visualType" value="stack" checked />
-          <label for="stackVisual">Stack View</label>
-          <input type="radio" id="treeVisual" name="visualType" value="tree" />
-          <label for="treeVisual">Tree View</label>
-        </div>
-      </div>
+      <fieldset class="visualization-type">
+        <legend>Visualization Type</legend>
+        <label>
+          <input type="radio" name="visualType" value="stack" id="stackVisual" checked />
+          Stack View
+        </label>
+        <label>
+          <input type="radio" name="visualType" value="tree" id="treeVisual" />
+          Tree View
+        </label>
+      </fieldset>
 
       <div class="button-group">
         <button id="startBtn" class="start-btn">Start</button>
-        <button id="pauseBtn" class="pause-btn">Pause</button>
-        <button id="stepBtn" class="step-btn">Step</button>
-        <button id="resetBtn" class="reset-btn">Reset</button>
+        <button id="pauseBtn" class="pause-btn" disabled>Pause</button>
+        <button id="stepBtn" class="step-btn" disabled>Step</button>
+        <button id="resetBtn" class="reset-btn" disabled>Reset</button>
       </div>
 
       <div class="speed-control">
         <label for="speedRange">Animation Speed:</label>
         <input type="range" id="speedRange" min="100" max="2000" step="100" value="1000" />
-        <span id="speedValue">1000ms</span>
+        <span id="speedValue">1000 ms</span>
       </div>
-    </div>
+    </section>
 
-    <div class="visualization-container">
-      <div class="visualization-controls">
-        <div id="treeControls" style="display: none;">
-          <button id="resetViewBtn" class="control-btn">Reset View</button>
-          <span class="control-hint">Hint: Drag to pan, scroll to zoom</span>
-        </div>
+    <section class="visualization-container">
+      <div class="visualization-controls" id="treeControls" style="display:none;">
+        <button id="resetViewBtn" class="control-btn">Reset View</button>
+        <span class="control-hint">Hint: Drag to pan, scroll to zoom</span>
       </div>
-      
+
       <h3 id="visualizationTitle">Stack Visualization</h3>
-      
-      <div id="stackView" class="visualization-view">
-        <canvas id="stackCanvas" width="800" height="500"></canvas>
-      </div>
-      
-      <div id="treeView" class="visualization-view" style="display: none;">
-        <canvas id="treeCanvas" width="800" height="500"></canvas>
-      </div>
-      
-      <h3>Execution Trace</h3>
-      <div id="stackTraceContainer" class="stack-trace"></div>
-    </div>
 
-    <div class="results">
+      <div id="stackView" class="visualization-view">
+        <canvas id="stackCanvas" width="800" height="500" aria-label="Stack visualization canvas"></canvas>
+      </div>
+
+      <div id="treeView" class="visualization-view" style="display:none;">
+        <canvas id="treeCanvas" width="800" height="500" aria-label="Tree visualization canvas"></canvas>
+      </div>
+
+      <h3>Execution Trace</h3>
+      <div id="stackTraceContainer" class="stack-trace" aria-live="polite" aria-atomic="true"></div>
+    </section>
+
+    <section class="results">
       <h3>Final Result: <span id="finalResult">-</span></h3>
-    </div>
+    </section>
   </div>
 
+  <!-- Scripts -->
   <script src="functions.js"></script>
   <script src="stackVisualizer.js"></script>
   <script src="treeVisualizer.js"></script>
