@@ -26,7 +26,17 @@ const functionInfo = {
 let startTime = 0;
 let callCount = 0;
 
-// DOM Elements
+// Visualization globals
+let treeCanvas, treeCtx;
+let treeNodes = {};
+let rootNodeId = null;
+let stack = [];
+let generator = null;
+let running = false;
+let speed = 500; // default speed in ms
+
+// DOM Elements - will be initialized later
+
 document.addEventListener('DOMContentLoaded', () => {
     const functionSelect = document.getElementById('functionSelect');
     const inputValue = document.getElementById('inputValue');
@@ -35,11 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const stepBtn = document.getElementById('stepBtn');
     const resetBtn = document.getElementById('resetBtn');
     const speedRange = document.getElementById('speedRange');
-    const functionDescription = document.getElementById('functionDescription');
-    const timeComplexity = document.getElementById('timeComplexity');
-    const spaceComplexity = document.getElementById('spaceComplexity');
-    const callCountElement = document.getElementById('callCount');
-    const executionTime = document.getElementById('executionTime');
 
     // Initialize canvas and visualizers
     initializeVisualizers();
@@ -54,10 +59,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initializeVisualizers() {
-    // Initialize both tree and stack visualizers
     treeCanvas = document.getElementById('treeCanvas');
     treeCtx = treeCanvas.getContext('2d');
-    
+
     // Set initial canvas dimensions
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
@@ -71,7 +75,6 @@ function resizeCanvas() {
     if (container) {
         treeCanvas.width = container.offsetWidth;
         treeCanvas.height = container.offsetHeight;
-        canvasWidth = treeCanvas.width;
         if (treeNodes && Object.keys(treeNodes).length > 0) {
             drawTree();
         }
@@ -98,18 +101,15 @@ function startVisualization() {
         resetMetrics();
         startTime = performance.now();
         generator = createGenerator();
-        treeGenerator = generator;
     }
     
     running = true;
-    treeRunning = true;
     updateControlButtons();
     runNextStep();
 }
 
 function pauseVisualization() {
     running = false;
-    treeRunning = false;
     updateControlButtons();
 }
 
@@ -118,7 +118,6 @@ function stepVisualization() {
         resetMetrics();
         startTime = performance.now();
         generator = createGenerator();
-        treeGenerator = generator;
     }
     
     runSingleStep();
@@ -127,9 +126,7 @@ function stepVisualization() {
 
 function resetVisualization() {
     running = false;
-    treeRunning = false;
     generator = null;
-    treeGenerator = null;
     treeNodes = {};
     stack = [];
     rootNodeId = null;
@@ -192,7 +189,7 @@ function runSingleStep() {
 
 function updateSpeed(event) {
     speed = parseInt(event.target.value);
-    document.getElementById('speedValue').textContent = `${speed}ms`;
+    document.getElementById('speedValue').textContent = `${speed} ms`;
 }
 
 function createGenerator() {
@@ -226,7 +223,8 @@ function updateTreeVisualization(frame) {
             args: frame.arg,
             local: frame.local,
             children: [],
-            parent: frame.parent
+            parent: frame.parent,
+            status: "running"
         };
         
         if (frame.parent && treeNodes[frame.parent]) {
@@ -255,3 +253,72 @@ function updateStackVisualization(frame) {
     
     drawStack();
 }
+
+function clearCanvas() {
+    if (treeCtx && treeCanvas) {
+        treeCtx.clearRect(0, 0, treeCanvas.width, treeCanvas.height);
+    }
+}
+
+// === THE MISSING drawTree() IMPLEMENTATION ===
+function drawTree() {
+    if (!treeCtx || !treeCanvas) return;
+
+    treeCtx.clearRect(0, 0, treeCanvas.width, treeCanvas.height);
+
+    if (!rootNodeId || !treeNodes[rootNodeId]) return;
+
+    const nodeRadius = 20;
+
+    // Recursive function to draw nodes and edges
+    function drawNode(nodeId, x, y) {
+        const node = treeNodes[nodeId];
+        if (!node) return;
+
+        // Draw lines to children first
+        if (node.children && node.children.length > 0) {
+            const spacing = 80;
+            const childY = y + 80;
+            const totalWidth = (node.children.length - 1) * spacing;
+
+            node.children.forEach((childId, i) => {
+                const childX = x - totalWidth / 2 + i * spacing;
+
+                // Draw line from this node to child node
+                treeCtx.beginPath();
+                treeCtx.moveTo(x, y + nodeRadius);
+                treeCtx.lineTo(childX, childY - nodeRadius);
+                treeCtx.strokeStyle = '#555';
+                treeCtx.lineWidth = 1.5;
+                treeCtx.stroke();
+
+                // Recursive draw child
+                drawNode(childId, childX, childY);
+            });
+        }
+
+        // Draw node circle
+        treeCtx.beginPath();
+        treeCtx.arc(x, y, nodeRadius, 0, 2 * Math.PI);
+        treeCtx.fillStyle = node.status === "completed" ? "#90ee90" : "#add8e6";
+        treeCtx.fill();
+        treeCtx.strokeStyle = "#000";
+        treeCtx.lineWidth = 1.5;
+        treeCtx.stroke();
+
+        // Draw function name and args inside the node
+        treeCtx.fillStyle = "#000";
+        treeCtx.font = "12px Arial";
+        treeCtx.textAlign = "center";
+        treeCtx.fillText(`${node.func}(${node.args})`, x, y + 4);
+    }
+
+    // Start drawing from root node centered horizontally, y=50
+    drawNode(rootNodeId, treeCanvas.width / 2, 50);
+}
+
+// Dummy placeholder for drawStack function
+function drawStack() {
+    // Implement your stack visualization here or leave empty for now
+}
+
