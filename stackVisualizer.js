@@ -32,60 +32,7 @@ const stackTraceContainer = document.getElementById("stackTraceContainer");
 const callCountDisplay = document.getElementById("callCount");
 
 // Function metadata
-const functionMetadata = {
-  factorial: {
-    name: "Factorial",
-    description: "Calculates n! = n × (n-1) × ... × 1. The factorial of a non-negative integer n is the product of all positive integers less than or equal to n.",
-    timeComplexity: "O(n)",
-    spaceComplexity: "O(n)",
-    secondInput: false,
-    arrayInput: false,
-    inputLabel: "n:",
-    maxValue: 10
-  },
-  fibonacci: {
-    name: "Fibonacci",
-    description: "Calculates the nth Fibonacci number, where F(n) = F(n-1) + F(n-2) with base cases F(0) = 0 and F(1) = 1.",
-    timeComplexity: "O(2^n)",
-    spaceComplexity: "O(n)",
-    secondInput: false,
-    arrayInput: false,
-    inputLabel: "n:",
-    maxValue: 10
-  },
-  gcd: {
-    name: "Greatest Common Divisor",
-    description: "Finds the largest positive integer that divides both numbers without a remainder using the Euclidean algorithm.",
-    timeComplexity: "O(log(min(a,b)))",
-    spaceComplexity: "O(log(min(a,b)))",
-    secondInput: true,
-    arrayInput: false,
-    inputLabel: "a:",
-    input2Label: "b:",
-    maxValue: 100
-  },
-  power: {
-    name: "Power Function",
-    description: "Calculates base^exponent using recursive multiplication.",
-    timeComplexity: "O(n)",
-    spaceComplexity: "O(n)",
-    secondInput: true,
-    arrayInput: false,
-    inputLabel: "Base:",
-    input2Label: "Exponent:",
-    maxValue: 10
-  },
-  sumArray: {
-    name: "Sum of Array",
-    description: "Recursively calculates the sum of all elements in an array.",
-    timeComplexity: "O(n)",
-    spaceComplexity: "O(n)",
-    secondInput: false,
-    arrayInput: true,
-    inputLabel: "Array elements (comma-separated):",
-    maxValue: 10
-  }
-};
+
 
 // Call counter
 let callCount = 0;
