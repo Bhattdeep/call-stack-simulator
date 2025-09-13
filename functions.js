@@ -1,6 +1,18 @@
-function* factorial(n) {
+function* factorial(n, parentId = null) {
   // Calculate factorial of n: n! = n * (n-1) * ... * 1
   console.log("Factorial called with n =", n);
+  
+  const callId = `factorial_${n}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Announce this function call
+  yield { 
+    type: "call", 
+    func: "factorial", 
+    arg: n, 
+    local: { n },
+    id: callId,
+    parent: parentId
+  };
   
   // Base case
   if (n === 0 || n === 1) {
@@ -8,27 +20,13 @@ function* factorial(n) {
       type: "return", 
       value: 1, 
       local: { n },
-      id: `factorial_${n}`,
-      parent: null
+      id: callId
     };
     return 1;
   }
   
-  // Make recursive call
-  const callId = `factorial_${n}`;
-  const childId = `factorial_${n-1}`;
-  
-  yield { 
-    type: "call", 
-    func: "factorial", 
-    arg: n - 1, 
-    local: { n },
-    id: callId,
-    childId: childId
-  };
-  
   // Get result from recursive call
-  const result = yield* factorial(n - 1);
+  const result = yield* factorial(n - 1, callId);
   
   // Calculate final result
   const final = n * result;
@@ -38,16 +36,27 @@ function* factorial(n) {
     type: "return", 
     value: final, 
     local: { n, result },
-    id: callId,
-    parent: n > 1 ? `factorial_${n+1}` : null
+    id: callId
   };
   
   return final;
 }
 
-function* fibonacci(n) {
+function* fibonacci(n, parentId = null) {
   // Calculate nth Fibonacci number: F(n) = F(n-1) + F(n-2)
   console.log("Fibonacci called with n =", n);
+  
+  const callId = `fib_${n}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Announce this function call
+  yield { 
+    type: "call", 
+    func: "fibonacci", 
+    arg: n, 
+    local: { n },
+    id: callId,
+    parent: parentId
+  };
   
   // Base cases
   if (n === 0) {
@@ -55,8 +64,7 @@ function* fibonacci(n) {
       type: "return", 
       value: 0, 
       local: { n },
-      id: `fib_${n}`,
-      parent: null
+      id: callId
     };
     return 0;
   }
@@ -66,40 +74,16 @@ function* fibonacci(n) {
       type: "return", 
       value: 1, 
       local: { n },
-      id: `fib_${n}`,
-      parent: null
+      id: callId
     };
     return 1;
   }
   
   // First recursive call (n-1)
-  const callId = `fib_${n}`;
-  const firstChildId = `fib_${n-1}`;
-  
-  yield { 
-    type: "call", 
-    func: "fibonacci", 
-    arg: n - 1, 
-    local: { n },
-    id: callId,
-    childId: firstChildId
-  };
-  
-  const a = yield* fibonacci(n - 1);
+  const a = yield* fibonacci(n - 1, callId);
   
   // Second recursive call (n-2)
-  const secondChildId = `fib_${n-2}`;
-  
-  yield { 
-    type: "call", 
-    func: "fibonacci", 
-    arg: n - 2, 
-    local: { n, a },
-    id: callId,
-    childId: secondChildId
-  };
-  
-  const b = yield* fibonacci(n - 2);
+  const b = yield* fibonacci(n - 2, callId);
   
   // Calculate final result
   const final = a + b;
@@ -109,19 +93,28 @@ function* fibonacci(n) {
     type: "return", 
     value: final, 
     local: { n, a, b },
-    id: callId,
-    parent: n < 10 ? `fib_${n+1}` : null // Prevent potential circular reference
+    id: callId
   };
   
   return final;
 }
 
-function* gcd(a, b) {
+function* gcd(a, b, parentId = null) {
   // Calculate greatest common divisor using the Euclidean algorithm
   console.log("GCD called with a =", a, "b =", b);
   
   // Create unique ID based on both arguments
-  const callId = `gcd_${a}_${b}`;
+  const callId = `gcd_${a}_${b}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Announce this function call
+  yield { 
+    type: "call", 
+    func: "gcd", 
+    arg: `${a}, ${b}`, 
+    local: { a, b },
+    id: callId,
+    parent: parentId
+  };
   
   // Base case
   if (b === 0) {
@@ -129,43 +122,40 @@ function* gcd(a, b) {
       type: "return", 
       value: a, 
       local: { a, b },
-      id: callId,
-      parent: null
+      id: callId
     };
     return a;
   }
   
   // Recursive call
-  const childId = `gcd_${b}_${a % b}`;
-  
-  yield { 
-    type: "call", 
-    func: "gcd", 
-    arg: `${b}, ${a % b}`, 
-    local: { a, b, remainder: a % b },
-    id: callId,
-    childId: childId
-  };
-  
-  const result = yield* gcd(b, a % b);
+  const result = yield* gcd(b, a % b, callId);
   
   // Return result
   yield { 
     type: "return", 
     value: result, 
     local: { a, b, result },
-    id: callId,
-    parent: null
+    id: callId
   };
   
   return result;
 }
 
-function* power(base, exponent) {
+function* power(base, exponent, parentId = null) {
   // Calculate base^exponent recursively
   console.log("Power called with base =", base, "exponent =", exponent);
   
-  const callId = `power_${base}_${exponent}`;
+  const callId = `power_${base}_${exponent}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Announce this function call
+  yield { 
+    type: "call", 
+    func: "power", 
+    arg: `${base}, ${exponent}`, 
+    local: { base, exponent },
+    id: callId,
+    parent: parentId
+  };
   
   // Base case
   if (exponent === 0) {
@@ -173,25 +163,13 @@ function* power(base, exponent) {
       type: "return", 
       value: 1, 
       local: { base, exponent },
-      id: callId,
-      parent: null
+      id: callId
     };
     return 1;
   }
   
   // Recursive call
-  const childId = `power_${base}_${exponent-1}`;
-  
-  yield { 
-    type: "call", 
-    func: "power", 
-    arg: `${base}, ${exponent-1}`, 
-    local: { base, exponent },
-    id: callId,
-    childId: childId
-  };
-  
-  const result = yield* power(base, exponent - 1);
+  const result = yield* power(base, exponent - 1, callId);
   
   // Calculate final result
   const final = base * result;
@@ -201,8 +179,7 @@ function* power(base, exponent) {
     type: "return", 
     value: final, 
     local: { base, exponent, result },
-    id: callId,
-    parent: null
+    id: callId
   };
   
   return final;
